@@ -16,6 +16,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def log_debug(message):
     """디버그 로그 출력 (Vercel 로그에 표시)"""
     print(message, file=sys.stderr, flush=True)
+    # stdout에도 출력 (Vercel이 둘 다 캡처)
+    print(message, flush=True)
+
+# 모듈 로드 시 로그 출력 (함수가 로드되는지 확인)
+log_debug("=" * 50)
+log_debug("DEBUG: api/webhook.py module loaded")
+log_debug("=" * 50)
 
 # 전역 애플리케이션 인스턴스
 application = None
@@ -208,6 +215,10 @@ class handler(BaseHTTPRequestHandler):
     BaseHTTPRequestHandler를 상속하여 텔레그램 웹훅 요청만 처리합니다.
     """
     
+    def __init__(self, *args, **kwargs):
+        log_debug("DEBUG: handler class __init__ called")
+        super().__init__(*args, **kwargs)
+    
     def _send_response(self, status_code, data):
         """응답 전송 헬퍼 메서드"""
         body = json.dumps(data).encode('utf-8')
@@ -219,13 +230,16 @@ class handler(BaseHTTPRequestHandler):
     
     def do_GET(self):
         """GET 요청 처리 (헬스체크)"""
+        log_debug("DEBUG: GET request received")
         self._send_response(200, {"ok": True, "message": "Webhook endpoint is active"})
     
     def do_POST(self):
         """POST 요청 처리 (텔레그램 웹훅)"""
+        log_debug("DEBUG: POST request received - Starting webhook processing")
         try:
             # 요청 body 읽기
             content_length = int(self.headers.get('Content-Length', 0))
+            log_debug(f"DEBUG: Content-Length: {content_length}")
             if content_length == 0:
                 self._send_response(200, {"ok": True, "skipped": "empty body"})
                 return
@@ -436,4 +450,8 @@ class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         """로그 메시지 출력 (Vercel 로그에 출력)"""
         log_debug(f"{self.address_string()} - {format % args}")
+
+# 모듈 로드 완료 로그
+log_debug("DEBUG: api/webhook.py module initialization complete")
+log_debug(f"DEBUG: handler class defined: {handler}")
 
